@@ -1,9 +1,8 @@
 package com.mira.mira_api.totvs;
 
 import com.mira.mira_api.totvs.dto.DocumentMeta;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import com.mira.mira_api.totvs.model.ReportEntity;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -12,13 +11,21 @@ import java.util.List;
 public class TotvsController {
 
     private final TotvsReportService service;
+    private final TotvsReportSyncService syncService;
 
-    public TotvsController(TotvsReportService service) {
+    // Injeção de ambos os serviços via construtor
+    public TotvsController(TotvsReportService service, TotvsReportSyncService syncService) {
         this.service = service;
+        this.syncService = syncService;
     }
 
     @GetMapping("/reports")
     public List<DocumentMeta> reports() {
         return service.findReports();
+    }
+
+    @PostMapping("/sync")
+    public List<ReportEntity> sync(@RequestParam(defaultValue = "2025") String year) {
+        return syncService.syncReports(year);
     }
 }

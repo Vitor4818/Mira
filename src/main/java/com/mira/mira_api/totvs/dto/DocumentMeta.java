@@ -5,6 +5,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record DocumentMeta(
+        @JsonProperty("id") String id,
+        @JsonProperty("download_link_id") String downloadLinkId,
         @JsonProperty("file_title") String fileTitle,
         @JsonProperty("file_quarter") Integer fileQuarter,
         @JsonProperty("file_year") Integer fileYear,
