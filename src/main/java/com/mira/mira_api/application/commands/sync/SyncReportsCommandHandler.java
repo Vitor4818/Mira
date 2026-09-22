@@ -20,6 +20,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.File;
 import java.util.List;
 
 @Service
@@ -96,7 +97,9 @@ public class SyncReportsCommandHandler {
 
             try {
                 String safeFileName = (company.getTicker() + "_" + meta.fileTitle()).replaceAll("[^a-zA-Z0-9.-]", "_") + ".pdf";
-                String localFilePath = reportDownloader.downloadPdf(meta.fileUrl(), safeFileName);
+
+                File downloadedFile = reportDownloader.downloadPdf(meta.fileUrl(), safeFileName);
+                String localFilePath = downloadedFile.getAbsolutePath();
 
                 ReportEntity reportEntity = new ReportEntity(
                         company.getName(),
