@@ -1,7 +1,5 @@
 package com.mira.mira_api.domain.FinancialReports.entity;
 
-
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -23,6 +21,14 @@ public class Profitability {
 
     private BigDecimal ebitdaMargin;
 
+    private BigDecimal netMargin;
+
+    private BigDecimal fcfMargin;
+
+    private BigDecimal ruleOf40Score;
+
+    private BigDecimal freeCashFlowConversion;
+
     private BigDecimal sgaToRevenue;
 
     @JsonIgnore
@@ -30,5 +36,4 @@ public class Profitability {
     @JoinColumn(name = "financial_report_id")
     private FinancialReport financialReport;
 
-    // getters e setters
 }

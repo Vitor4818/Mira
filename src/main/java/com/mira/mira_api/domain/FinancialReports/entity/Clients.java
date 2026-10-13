@@ -17,7 +17,11 @@ public class Clients {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private BigDecimal topClientsConcentration;
+    private BigDecimal topClientConcentration;
+
+    private BigDecimal top5ClientsConcentration;
+
+    private BigDecimal top10ClientsConcentration;
 
     private BigDecimal netRetentionRate;
 
@@ -26,5 +30,4 @@ public class Clients {
     @JoinColumn(name = "financial_report_id")
     private FinancialReport financialReport;
 
-    // getters e setters
 }

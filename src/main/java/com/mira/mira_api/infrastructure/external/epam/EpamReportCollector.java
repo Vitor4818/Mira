@@ -18,9 +18,12 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
 import java.io.File;
+import java.io.InputStream;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -55,7 +58,7 @@ public class EpamReportCollector implements CompanyReportCollectorRepository {
                 BASE_URL, year
         );
 
-        log.info("🔍 Consultando feed Q4 da EPAM para o ano {}: {}", year, feedUrl);
+        log.info("🔍 Consultando feed da EPAM para o ano {}: {}", year, feedUrl);
 
         try {
             String rawJson = restClient.get()
@@ -80,6 +83,7 @@ public class EpamReportCollector implements CompanyReportCollectorRepository {
             }
 
             List<DocumentMeta> documentMetas = new ArrayList<>();
+            int previousYear = Integer.parseInt(year) - 1;
 
             for (JsonNode item : listResult) {
                 String headline = item.path("Headline").asText("");
@@ -89,40 +93,92 @@ public class EpamReportCollector implements CompanyReportCollectorRepository {
                     continue;
                 }
 
+                // Ignora relatórios que pertencem explicitamente ao ano fiscal anterior (ex: 4T do ano N-1)
+                if (headlineLower.contains(String.valueOf(previousYear)) &&
+                        (headlineLower.contains("fourth quarter") || headlineLower.contains("full year"))) {
+                    log.info("⏭️ Ignorando relatório de fecho do ano anterior encontrado no feed: {}", headline);
+                    continue;
+                }
+
                 int quarter = extractQuarter(headline);
                 String rawHtmlBody = item.path("Body").asText("");
                 String publishedDate = item.path("PressReleaseDate").asText(null);
 
-                // Converte HTML do release para texto limpo e estruturado
+                // 1. Processa e adiciona o Earnings Release sintetizado em PDF
                 String plainText = Jsoup.parse(rawHtmlBody).text();
+                String releaseFileName = String.format("EPAM_Q%dT%s_Earnings_Release.pdf", quarter, year);
+                File generatedPdf = createPdfFromReleaseText(releaseFileName, headline, plainText);
 
-                // Gera o PDF com todas as páginas necessárias para preservar as tabelas financeiras
-                String fileName = String.format("EPAM_EPAM_Q%dT%s_Earnings_Release.pdf", quarter, year);
-                File generatedPdf = createPdfFromReleaseText(fileName, headline, plainText);
-
-                String fileUrl = generatedPdf.toURI().toString();
-                String docTitle = String.format("EPAM Q%dT%s Earnings Release", quarter, year);
-
-                log.info("✅ Release sintetizado com sucesso: [{}] -> {}", docTitle, generatedPdf.getAbsolutePath());
+                String releaseUrl = generatedPdf.toURI().toString();
+                String releaseDocTitle = String.format("EPAM Q%dT%s Earnings Release", quarter, year);
 
                 documentMetas.add(new DocumentMeta(
-                        UUID.nameUUIDFromBytes(docTitle.getBytes()).toString(),
-                        fileUrl,
-                        docTitle,
+                        UUID.nameUUIDFromBytes(releaseDocTitle.getBytes()).toString(),
+                        releaseUrl,
+                        releaseDocTitle,
                         quarter,
                         Integer.parseInt(year),
                         "earnings_release",
-                        fileUrl,
+                        releaseUrl,
                         publishedDate
                 ));
+
+                // 2. Adiciona automaticamente a Investor Presentation oficial da Q4CDN para este trimestre/ano
+                addInvestorPresentationSafely(quarter, year, publishedDate, documentMetas);
             }
 
-            log.info("📑 Encontrados e convertidos {} releases da EPAM para o ano {}", documentMetas.size(), year);
+            log.info("📑 Total de documentos consolidados da EPAM para o ano {}: {}", year, documentMetas.size());
             return documentMetas;
 
         } catch (Exception e) {
             log.error("Erro ao coletar e processar relatórios da EPAM: {}", e.getMessage(), e);
             return Collections.emptyList();
+        }
+    }
+
+    private void addInvestorPresentationSafely(int quarter, String year, String publishedDate, List<DocumentMeta> documentMetas) {
+        Path targetDir = Paths.get(TEMP_STORAGE);
+        try {
+            Files.createDirectories(targetDir);
+
+            // Padrão exato da Q4CDN utilizado pela EPAM para as apresentações trimestrais
+            String presentationUrl = String.format(
+                    "https://s202.q4cdn.com/436759741/files/doc_financials/%s/q%d/EPAM-Investor-Presentation-Q%d-%s.pdf",
+                    year, quarter, quarter, year
+            );
+
+            String fileName = String.format("EPAM_Q%dT%s_Earnings_Presentation.pdf", quarter, year);
+            File pdfFile = targetDir.resolve(fileName).toFile();
+
+            log.info("📥 Baixando Investor Presentation da EPAM: {}", presentationUrl);
+            downloadFile(presentationUrl, pdfFile);
+
+            String fileUrl = pdfFile.toURI().toString();
+            String docTitle = String.format("EPAM Q%dT%s Earnings Presentation", quarter, year);
+
+            boolean alreadyExists = documentMetas.stream().anyMatch(m -> m.fileUrl().equals(fileUrl));
+            if (!alreadyExists) {
+                documentMetas.add(new DocumentMeta(
+                        UUID.nameUUIDFromBytes((docTitle + quarter + year).getBytes()).toString(),
+                        fileUrl,
+                        docTitle,
+                        quarter,
+                        Integer.parseInt(year),
+                        "earnings_presentation",
+                        fileUrl,
+                        publishedDate
+                ));
+                log.info("✅ Investor Presentation adicionada ao pipeline com sucesso: [{}]", docTitle);
+            }
+        } catch (Exception e) {
+            log.warn("⚠️ Não foi possível descarregar a Investor Presentation para Q{}/{} (pode ainda não ter sido publicada): {}", quarter, year, e.getMessage());
+        }
+    }
+
+    private void downloadFile(String urlStr, File destination) throws Exception {
+        URI uri = new URI(urlStr);
+        try (InputStream in = uri.toURL().openStream()) {
+            Files.copy(in, destination.toPath(), StandardCopyOption.REPLACE_EXISTING);
         }
     }
 
@@ -159,7 +215,6 @@ public class EpamReportCollector implements CompanyReportCollectorRepository {
                     yOffset -= 10;
                     line = new StringBuilder();
 
-                    // Quebra para uma nova página sempre que o limite inferior for atingido
                     if (yOffset < 40) {
                         stream.endText();
                         stream.close();
@@ -190,7 +245,6 @@ public class EpamReportCollector implements CompanyReportCollectorRepository {
 
     private String sanitizeText(String text) {
         if (text == null) return "";
-        // Remove carateres fora do conjunto WinAnsi exigido pelo PDFBox para as fontes padrão
         return text.replaceAll("[^\\x20-\\x7E]", " ");
     }
 

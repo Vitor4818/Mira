@@ -1,6 +1,5 @@
 package com.mira.mira_api.domain.FinancialReports.entity;
 
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -20,10 +19,17 @@ public class Valuation {
 
     private BigDecimal freeCashFlow;
 
+    private BigDecimal cashAndEquivalents;
+
+    private BigDecimal grossDebt;
+
+    private BigDecimal netDebt;
+
+    private BigDecimal netDebtEbitdaRatio;
+
     @JsonIgnore
     @OneToOne
     @JoinColumn(name = "financial_report_id")
     private FinancialReport financialReport;
 
-    // getters e setters
 }

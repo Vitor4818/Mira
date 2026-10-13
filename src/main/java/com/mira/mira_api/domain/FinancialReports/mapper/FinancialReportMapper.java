@@ -1,4 +1,4 @@
-package com.mira.mira_api.domain.FinancialReports.mapper; // ou .mapper se mover
+package com.mira.mira_api.domain.FinancialReports.mapper;
 
 import com.mira.mira_api.domain.FinancialReports.dto.*;
 import com.mira.mira_api.domain.FinancialReports.entity.*;
@@ -78,7 +78,9 @@ public class FinancialReportMapper {
 
     private Clients toClientsEntity(ClientsDTO dto) {
         Clients clients = new Clients();
-        clients.setTopClientsConcentration(dto.topClientsConcentration());
+        clients.setTopClientConcentration(dto.topClientConcentration());
+        clients.setTop5ClientsConcentration(dto.top5ClientsConcentration());
+        clients.setTop10ClientsConcentration(dto.top10ClientsConcentration());
         clients.setNetRetentionRate(dto.netRetentionRate());
         return clients;
     }
@@ -96,6 +98,10 @@ public class FinancialReportMapper {
         Profitability profitability = new Profitability();
         profitability.setGrossMargin(dto.grossMargin());
         profitability.setEbitdaMargin(dto.ebitdaMargin());
+        profitability.setNetMargin(dto.netMargin());
+        profitability.setFcfMargin(dto.fcfMargin());
+        profitability.setRuleOf40Score(dto.ruleOf40Score());
+        profitability.setFreeCashFlowConversion(dto.freeCashFlowConversion());
         profitability.setSgaToRevenue(dto.sgaToRevenue());
         return profitability;
     }
@@ -103,6 +109,10 @@ public class FinancialReportMapper {
     private Valuation toValuationEntity(ValuationDTO dto) {
         Valuation valuation = new Valuation();
         valuation.setFreeCashFlow(dto.freeCashFlow());
+        valuation.setCashAndEquivalents(dto.cashAndEquivalents());
+        valuation.setGrossDebt(dto.grossDebt());
+        valuation.setNetDebt(dto.netDebt());
+        valuation.setNetDebtEbitdaRatio(dto.netDebtEbitdaRatio());
         return valuation;
     }
 }

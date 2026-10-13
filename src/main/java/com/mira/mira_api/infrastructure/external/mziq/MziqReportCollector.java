@@ -37,14 +37,17 @@ public class MziqReportCollector implements CompanyReportCollectorRepository {
 
     @Override
     public List<DocumentMeta> fetchReportMetas(Company company, String year) {
+        return fetchReportMetas(company, year, null);
+    }
+
+    public List<DocumentMeta> fetchReportMetas(Company company, String year, Integer quarter) {
         int yearInt = Integer.parseInt(year);
 
-        // Seleciona o request ideal para o padrão da empresa (B3 vs NYSE)
         MziqFilterRequest requestBody = isBrazilianMarket(company.getTicker())
                 ? MziqFilterRequest.forBrazilianCompany(yearInt)
                 : MziqFilterRequest.forUsCompany(yearInt);
 
-        log.info("🔍 Consultando MZIQ para {} ({}) com ano={}", company.getName(), company.getTicker(), year);
+        log.info("🔍 Consultando MZIQ para {} ({}) com ano={} e trimestre={}", company.getName(), company.getTicker(), year, quarter);
 
         String rawJson = restClient.post()
                 .uri(company.getApiUrl())
@@ -52,8 +55,6 @@ public class MziqReportCollector implements CompanyReportCollectorRepository {
                 .body(requestBody)
                 .retrieve()
                 .body(String.class);
-
-        log.info("📥 Resposta crua do MZIQ para {}: {}", company.getTicker(), rawJson);
 
         if (rawJson == null || rawJson.isBlank()) {
             return Collections.emptyList();
@@ -63,7 +64,6 @@ public class MziqReportCollector implements CompanyReportCollectorRepository {
             JsonNode root = objectMapper.readTree(rawJson);
             JsonNode arrayNode = null;
 
-            // Mapeamento resiliente de caminhos possíveis no retorno do MZiQ
             if (root.hasNonNull("data") && root.get("data").hasNonNull("document_metas") && root.get("data").get("document_metas").isArray()) {
                 arrayNode = root.get("data").get("document_metas");
             } else if (root.hasNonNull("document_metas") && root.get("document_metas").isArray()) {
@@ -75,12 +75,36 @@ public class MziqReportCollector implements CompanyReportCollectorRepository {
             }
 
             if (arrayNode != null) {
-                List<DocumentMeta> documentMetas = new ArrayList<>();
+                List<DocumentMeta> allMetas = new ArrayList<>();
                 for (JsonNode item : arrayNode) {
-                    documentMetas.add(objectMapper.treeToValue(item, DocumentMeta.class));
+                    DocumentMeta meta = objectMapper.treeToValue(item, DocumentMeta.class);
+                    allMetas.add(meta);
+                    log.info("📥 [MZIQ bruto] Título: '{}' | InternalName: '{}' | Ano: {} | Trimestre: {}",
+                            meta.fileTitle(), meta.internalName(), meta.fileYear(), meta.fileQuarter());
                 }
-                log.info("📑 Encontrados {} documentos para {}", documentMetas.size(), company.getTicker());
-                return documentMetas;
+
+                List<DocumentMeta> targetedMetas = new ArrayList<>();
+
+                for (DocumentMeta meta : allMetas) {
+                    boolean isTargetYear = meta.fileYear() != null && meta.fileYear() == yearInt;
+                    boolean isTargetQuarter = (quarter == null) || (meta.fileQuarter() != null && meta.fileQuarter().equals(quarter));
+
+                    if (isTargetYear && isTargetQuarter) {
+                        // 🔓 MODO TOTALMENTE PERMISSIVO: Traz absolutamente TUDO o que pertencer ao trimestre/ano
+                        // Isto vai garantir que a apresentação entra, seja qual for o nome dela!
+                        targetedMetas.add(meta);
+                        log.info("🎯 Documento incluído sem restrições: [{}] (Internal: {})", meta.fileTitle(), meta.internalName());
+                    }
+                }
+
+                if (!targetedMetas.isEmpty()) {
+                    log.info("📑 Total de {} documentos enviados para processamento em Q{}/{}",
+                            targetedMetas.size(), quarter != null ? quarter : "ALL", yearInt);
+                    return targetedMetas;
+                }
+
+                log.warn("⚠️ Nenhum documento correspondente encontrado para Q{}/{} em {}.", quarter, yearInt, company.getTicker());
+                return allMetas;
             }
 
             log.warn("⚠️ Não foi possível identificar a lista 'document_metas' no JSON da empresa {}", company.getTicker());

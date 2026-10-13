@@ -15,7 +15,8 @@ public record MziqFilterRequest(
                 List.of(
                         "central_de_resultados_release_de_resultados",
                         "central_de_resultados_demonstracoes_financeiras_itr_dfp",
-                        "central_de_resultados_dfpi"
+                        "central_de_resultados_dfpi",
+                        "central_de_resultados_apresentacoes"
                 ),
                 "pt_BR",
                 true,
@@ -27,7 +28,10 @@ public record MziqFilterRequest(
         return new MziqFilterRequest(
                 List.of(
                         "quarterly_results_earnings_release",
-                        "quarterly_results_6k_quarterly_filing"
+                        "quarterly_results_6k_quarterly_filing",
+                        "quarterly_results_earnings_presentation",
+                        "quarterly_results_financial_statement",
+                        "quarterly_results_financial_spreadsheet"
                 ),
                 "en_US",
                 true,

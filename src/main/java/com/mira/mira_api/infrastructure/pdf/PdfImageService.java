@@ -20,7 +20,7 @@ public class PdfImageService {
 
     private static final Logger log = LoggerFactory.getLogger(PdfImageService.class);
     private static final float DPI = 150f; // Resolução ideal para tabelas e texto legível
-    private static final int DEFAULT_MAX_PAGES = 8; // Destaques e DRE costumam estar nas primeiras páginas
+    private static final int DEFAULT_MAX_PAGES = 20; // Aumentado para abranger tabelas de segmentos e geografia no fim do documento
 
     /**
      * Converte até o limite padrão de páginas (otimização de memória e tokens).

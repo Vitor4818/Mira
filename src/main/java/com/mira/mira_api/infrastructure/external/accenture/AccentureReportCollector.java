@@ -81,28 +81,32 @@ public class AccentureReportCollector implements CompanyReportCollectorRepositor
                     String docExt = linkNode.path("docExt").asText("");
                     String relativeLink = linkNode.path("link").asText("");
 
-                    // Filtramos estritamente o Press Release contábil em PDF
-                    if ("PDF".equalsIgnoreCase(docExt.trim()) && isEarningsRelease(customLinkText, relativeLink)) {
-                        String fullPdfUrl = relativeLink.startsWith("http") ? relativeLink : BASE_URL + relativeLink;
-                        String docTitle = String.format("%s - %s", quarterTitle, customLinkText);
+                    // Valida se é PDF e se enquadra nos tipos desejados (Earnings Release ou Presentation)
+                    if ("PDF".equalsIgnoreCase(docExt.trim())) {
+                        String category = categorizeDocument(customLinkText, relativeLink);
 
-                        log.info("📄 Documento contábil identificado para Accenture: [{}] -> {}", docTitle, fullPdfUrl);
+                        if (category != null) {
+                            String fullPdfUrl = relativeLink.startsWith("http") ? relativeLink : BASE_URL + relativeLink;
+                            String docTitle = String.format("%s - %s", quarterTitle, customLinkText);
 
-                        documentMetas.add(new DocumentMeta(
-                                UUID.nameUUIDFromBytes(fullPdfUrl.getBytes()).toString(),
-                                fullPdfUrl,
-                                docTitle,
-                                quarterNumber,
-                                Integer.parseInt(year),
-                                "earnings_release",
-                                fullPdfUrl,
-                                quarterNode.path("date").asText(null)
-                        ));
+                            log.info("📄 Documento identificado para Accenture [{}]: [{}] -> {}", category, docTitle, fullPdfUrl);
+
+                            documentMetas.add(new DocumentMeta(
+                                    UUID.nameUUIDFromBytes(fullPdfUrl.getBytes()).toString(),
+                                    fullPdfUrl,
+                                    docTitle,
+                                    quarterNumber,
+                                    Integer.parseInt(year),
+                                    category,
+                                    fullPdfUrl,
+                                    quarterNode.path("date").asText(null)
+                            ));
+                        }
                     }
                 }
             }
 
-            log.info("📑 Encontrados {} documentos contábeis para Accenture no ano {}", documentMetas.size(), year);
+            log.info("📑 Encontrados {} documentos contábeis/operacionais para Accenture no ano {}", documentMetas.size(), year);
             return documentMetas;
 
         } catch (Exception e) {
@@ -111,11 +115,23 @@ public class AccentureReportCollector implements CompanyReportCollectorRepositor
         }
     }
 
-    private boolean isEarningsRelease(String text, String link) {
+    private String categorizeDocument(String text, String link) {
         String combined = (text + " " + link).toLowerCase();
-        return combined.contains("earnings-release")
+
+        if (combined.contains("earnings-release")
                 || combined.contains("earnings press release")
-                || combined.contains("earnings_release");
+                || combined.contains("earnings_release")) {
+            return "earnings_release";
+        }
+
+        if (combined.contains("presentation")
+                || combined.contains("slides")
+                || combined.contains("investor presentation")
+                || combined.contains("webcast")) {
+            return "earnings_presentation";
+        }
+
+        return null;
     }
 
     private int extractQuarterNumber(String title) {
