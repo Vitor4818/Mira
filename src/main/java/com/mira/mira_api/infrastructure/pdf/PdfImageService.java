@@ -19,20 +19,15 @@ import java.util.List;
 public class PdfImageService {
 
     private static final Logger log = LoggerFactory.getLogger(PdfImageService.class);
-    private static final float DPI = 150f; // Resolução ideal para tabelas e texto legível
-    private static final int DEFAULT_MAX_PAGES = 20; // Aumentado para abranger tabelas de segmentos e geografia no fim do documento
+    private static final float DPI = 150f;
+    private static final int DEFAULT_MAX_PAGES = 20;
 
-    /**
-     * Converte até o limite padrão de páginas (otimização de memória e tokens).
-     */
+
     public List<byte[]> convertPdfToImages(String filePath) throws IOException {
         return convertPdfToImages(filePath, DEFAULT_MAX_PAGES);
     }
 
-    /**
-     * Converte as páginas de um PDF em uma lista de bytes PNG até um limite máximo.
-     * @param maxPages se <= 0, processa o documento inteiro.
-     */
+
     public List<byte[]> convertPdfToImages(String filePath, int maxPages) throws IOException {
         File pdfFile = new File(filePath);
         if (!pdfFile.exists()) {
@@ -46,7 +41,7 @@ public class PdfImageService {
             int totalPages = document.getNumberOfPages();
             int pagesToRender = (maxPages > 0) ? Math.min(totalPages, maxPages) : totalPages;
 
-            log.info("🖼️ Renderizando {} de {} páginas do PDF [{}] para visão multimodal...",
+            log.info("Renderizando {} de {} páginas do PDF [{}] para visão multimodal...",
                     pagesToRender, totalPages, pdfFile.getName());
 
             for (int i = 0; i < pagesToRender; i++) {

@@ -56,7 +56,7 @@ public class IngestReportCommandHandler {
                     command.company(), command.quarter(), command.year()));
         }
 
-        log.info("🚀 Relatório inédito. Iniciando pipeline de extração com Amazon Bedrock para {}...", command.ticker());
+        log.info("Relatório inédito. Iniciando pipeline de extração com Amazon Bedrock para {}...", command.ticker());
 
         // 2. Extrai texto do PDF
         List<Document> documents = pdfService.readPdfAsDocuments(command.fileName());

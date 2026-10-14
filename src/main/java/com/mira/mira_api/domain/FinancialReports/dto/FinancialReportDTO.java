@@ -22,11 +22,11 @@ public record FinancialReportDTO(
         @JsonAlias({"valuation", "debt"})
         ValuationDTO valuation,
 
-        // Lista dinâmica de verticais de indústria
+        //Lista dinâmica de verticais de indústria
         @JsonAlias({"industryVerticals", "industry_verticals", "verticals"})
         List<IndustryVerticalDTO> industryVerticals,
 
-        // Lista dinâmica de regiões geográficas
+        //Lista dinâmica de regiões geográficas
         @JsonAlias({"geographicRevenue", "geographic_revenue", "geographic_exposure", "regions"})
         List<GeographicRegionDTO> geographicRevenue,
 

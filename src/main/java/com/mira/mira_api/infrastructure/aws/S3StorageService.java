@@ -25,7 +25,7 @@ public class S3StorageService {
 
     public String uploadFile(File file, String s3Key) {
         try {
-            log.info("☁️ A enviar ficheiro [{}] para o S3 (Bucket: {} / Key: {})...", file.getName(), bucketName, s3Key);
+            log.info("A enviar ficheiro [{}] para o S3 (Bucket: {} / Key: {})...", file.getName(), bucketName, s3Key);
 
             PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                     .bucket(bucketName)

@@ -20,22 +20,22 @@ public class Company {
     private Long id;
 
     @Column(nullable = false, unique = true)
-    private String name; // ex: "TOTVS"
+    private String name;
 
     @Column(nullable = false, unique = true)
-    private String ticker; // ex: "TOTS3"
+    private String ticker;
 
     @Column(name = "currency", length = 10)
     private String currency = "BRL";
 
     @Column(nullable = false)
-    private String sector; // ex: "Tecnologia / Software de Gestão"
+    private String sector;
 
     @Column(name = "provider_type", nullable = false)
-    private String providerType; // ex: "MZIQ", "GENERIC_URL", "SCRAPING"
+    private String providerType;
 
     @Column(name = "api_url")
-    private String apiUrl; // ex: endpoint do MZIQ para busca de documentos
+    private String apiUrl;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();

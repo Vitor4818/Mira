@@ -11,7 +11,6 @@ import java.util.List;
 @Service
 public class CompanyReportService {
 
-    // Recebe a INTERFACE. O Spring coloca o MziqReportCollector aqui dentro sozinho!
     private final List<CompanyReportCollectorRepository> collectors;
     private final CompanyRepository companyRepository;
 

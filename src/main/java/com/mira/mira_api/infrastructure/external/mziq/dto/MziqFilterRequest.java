@@ -8,7 +8,7 @@ public record MziqFilterRequest(
         List<String> categories,
         String language,
         Boolean published,
-        Object year // Aceita tanto int quanto String
+        Object year
 ) {
     public static MziqFilterRequest forBrazilianCompany(int year) {
         return new MziqFilterRequest(

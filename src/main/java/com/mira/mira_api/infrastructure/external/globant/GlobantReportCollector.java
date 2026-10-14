@@ -41,7 +41,7 @@ public class GlobantReportCollector implements CompanyReportCollectorRepository 
 
     @Override
     public List<DocumentMeta> fetchReportMetas(Company company, String year) {
-        log.info("🔍 Scrapeando a página de relatórios da Globant para o ano {}: {}", year, TARGET_URL);
+        log.info("Scrapeando a página de relatórios da Globant para o ano {}: {}", year, TARGET_URL);
 
         try {
             Document doc = Jsoup.connect(TARGET_URL)
@@ -88,7 +88,7 @@ public class GlobantReportCollector implements CompanyReportCollectorRepository 
                     String fileName = String.format("GLOB_Q%dT%s_%s.pdf", quarter, year, sanitizeFileName(category));
                     File pdfFile = targetDir.resolve(fileName).toFile();
 
-                    log.info("📥 Baixando PDF nativo da Globant ({}) de: {}", category, href);
+                    log.info("Baixando PDF nativo da Globant ({}) de: {}", category, href);
                     downloadFile(href, pdfFile);
 
                     localFilePath = pdfFile.toURI().toString();
@@ -107,7 +107,7 @@ public class GlobantReportCollector implements CompanyReportCollectorRepository 
                 String docTitle = String.format("Globant Q%dT%s %s", quarter, year, formatCategoryName(category));
                 String metaId = UUID.nameUUIDFromBytes((docTitle + quarter + year).getBytes()).toString();
 
-                log.info("✅ Relatório mapeado da Globant: [{}] -> {}", docTitle, localFilePath);
+                log.info("Relatório mapeado da Globant: [{}] -> {}", docTitle, localFilePath);
 
                 documentMetas.add(new DocumentMeta(
                         metaId,
@@ -121,7 +121,7 @@ public class GlobantReportCollector implements CompanyReportCollectorRepository 
                 ));
             }
 
-            log.info("📑 Total de relatórios da Globant encontrados para o ano {}: {}", year, documentMetas.size());
+            log.info("Total de relatórios da Globant encontrados para o ano {}: {}", year, documentMetas.size());
             return documentMetas;
 
         } catch (Exception e) {

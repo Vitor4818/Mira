@@ -27,7 +27,6 @@ public class GeographicRegion {
     @JoinColumn(name = "revenue_id")
     private Revenue revenueData;
 
-    // getters e setters
 }
 
 

@@ -48,7 +48,7 @@ public class FinancialReport {
     @OneToMany(mappedBy = "financialReport", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<FinancialReportGeography> geographicRevenue = new ArrayList<>();
 
-    // Métodos auxiliares para associar os filhos corretamente
+    //Métodos auxiliares para associar os filhos corretamente
     public void addVertical(FinancialReportVertical vertical) {
         if (this.industryVerticals == null) {
             this.industryVerticals = new ArrayList<>();

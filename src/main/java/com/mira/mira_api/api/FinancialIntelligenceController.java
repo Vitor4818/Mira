@@ -34,10 +34,7 @@ public class FinancialIntelligenceController {
         this.financialReportRepository = financialReportRepository;
     }
 
-    /**
-     * COMMAND: Sincronização automática para qualquer empresa via Ticker.
-     * Exemplo: POST /api/v1/intelligence/sync?ticker=TOTS3&year=2026
-     */
+ //Realiza a consulta via TICKER no pathparams
     @PostMapping("/sync")
     public ResponseEntity<String> syncReports(
             @RequestParam String ticker,
@@ -47,19 +44,14 @@ public class FinancialIntelligenceController {
         return ResponseEntity.ok(String.format("Sincronização dos relatórios de %s (%s) concluída com sucesso!", ticker.toUpperCase(), year));
     }
 
-    /**
-     * COMMAND: Ingestão pontual de um PDF já salvo em disco.
-     */
+
     @PostMapping("/ingest")
     public ResponseEntity<FinancialReport> ingestReport(@RequestBody IngestReportCommand command) {
         FinancialReport report = ingestHandler.handle(command);
         return ResponseEntity.ok(report);
     }
 
-    /**
-     * Endpoint utilitário para testar o card do Slack.
-     * Pode passar o ticker opcionalmente: POST /api/v1/intelligence/test-slack-card?ticker=TOTS3
-     */
+
     @PostMapping("/test-slack-card")
     public ResponseEntity<String> testSlackCard(@RequestParam(required = false) String ticker) {
         List<FinancialReport> reports = (ticker != null && !ticker.isBlank())

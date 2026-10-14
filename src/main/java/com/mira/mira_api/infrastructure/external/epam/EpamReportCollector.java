@@ -150,7 +150,7 @@ public class EpamReportCollector implements CompanyReportCollectorRepository {
             String fileName = String.format("EPAM_Q%dT%s_Earnings_Presentation.pdf", quarter, year);
             File pdfFile = targetDir.resolve(fileName).toFile();
 
-            log.info("📥 Baixando Investor Presentation da EPAM: {}", presentationUrl);
+            log.info("Baixando Investor Presentation da EPAM: {}", presentationUrl);
             downloadFile(presentationUrl, pdfFile);
 
             String fileUrl = pdfFile.toURI().toString();
@@ -168,10 +168,10 @@ public class EpamReportCollector implements CompanyReportCollectorRepository {
                         fileUrl,
                         publishedDate
                 ));
-                log.info("✅ Investor Presentation adicionada ao pipeline com sucesso: [{}]", docTitle);
+                log.info("Investor Presentation adicionada ao pipeline com sucesso: [{}]", docTitle);
             }
         } catch (Exception e) {
-            log.warn("⚠️ Não foi possível descarregar a Investor Presentation para Q{}/{} (pode ainda não ter sido publicada): {}", quarter, year, e.getMessage());
+            log.warn("Não foi possível descarregar a Investor Presentation para Q{}/{} (pode ainda não ter sido publicada): {}", quarter, year, e.getMessage());
         }
     }
 

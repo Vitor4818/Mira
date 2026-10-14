@@ -7,7 +7,7 @@ public record ProcessReportRequest(
         Integer year,
         Integer quarter
 ) {
-    // Define valores padrão caso não venham no JSON
+    //Define valores padrão caso não venham no JSON
     public ProcessReportRequest {
         if (company == null) company = "TOTVS";
         if (ticker == null) ticker = "TOTS3";

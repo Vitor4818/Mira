@@ -17,9 +17,6 @@ public class SpringAiPdfService {
 
     private static final Logger log = LoggerFactory.getLogger(SpringAiPdfService.class);
 
-    /**
-     * Lê todas as páginas do PDF e retorna uma lista de Documents do Spring AI.
-     */
     public List<Document> readPdfAsDocuments(String filePath) {
         File file = new File(filePath);
 
@@ -38,14 +35,12 @@ public class SpringAiPdfService {
         );
 
         List<Document> documents = reader.get();
-        log.info("📄 PDF lido com sucesso via Spring AI: {} páginas extraídas de [{}]",
+        log.info("PDF lido com sucesso via Spring AI: {} páginas extraídas de [{}]",
                 documents.size(), file.getName());
         return documents;
     }
 
-    /**
-     * Concatena o texto de todas as páginas em uma única String para o Bedrock.
-     */
+
     public String extractFullText(String filePath) {
         List<Document> docs = readPdfAsDocuments(filePath);
         return docs.stream()

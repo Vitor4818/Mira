@@ -78,7 +78,7 @@ public class SyncReportsCommandHandler {
         List<DocumentMeta> metas = companyReportService.findReports(company, command.year());
 
         if (metas == null || metas.isEmpty()) {
-            log.warn("⚠️ Nenhum documento encontrado para {} no ano {}.", company.getTicker(), targetYearValue);
+            log.warn("Nenhum documento encontrado para {} no ano {}.", company.getTicker(), targetYearValue);
             return;
         }
 
@@ -96,12 +96,11 @@ public class SyncReportsCommandHandler {
 
             // Proteção contra duplicidade de trimestre
             if (financialReportRepository.existsByTickerAndYearAndQuarter(company.getTicker(), targetYearValue, targetQuarter)) {
-                log.info("⏭️ Trimestre {}T{} de {} já processado anteriormente. Ignorando.",
+                log.info("⏭Trimestre {}T{} de {} já processado anteriormente. Ignorando.",
                         targetQuarter, targetYearValue, company.getTicker());
                 continue;
             }
 
-            // 🚀 ORDENAÇÃO ATUALIZADA: Prioriza Apresentações, Earnings, Filings, ITRs e Releases para o topo
             quarterMetas.sort((m1, m2) -> {
                 String t1 = m1.fileTitle() != null ? m1.fileTitle().toLowerCase() : "";
                 String t2 = m2.fileTitle() != null ? m2.fileTitle().toLowerCase() : "";
@@ -137,7 +136,7 @@ public class SyncReportsCommandHandler {
                 String titleLower = meta.fileTitle() != null ? meta.fileTitle().toLowerCase() : "";
 
                 if (isPurelyIrrelevantDocument(titleLower)) {
-                    log.info("⏭️ Ignorando arquivo irrelevante: {}", meta.fileTitle());
+                    log.info("⏭Ignorando arquivo irrelevante: {}", meta.fileTitle());
                     continue;
                 }
 
@@ -165,7 +164,7 @@ public class SyncReportsCommandHandler {
                     combinedFullText.append("========================================\n\n");
                     combinedFullText.append(pdfText);
 
-                    log.info("📄 Texto acumulado para {}T{}: [{}]", targetQuarter, targetYearValue, meta.fileTitle());
+                    log.info("Texto acumulado para {}T{}: [{}]", targetQuarter, targetYearValue, meta.fileTitle());
 
                 } catch (Exception e) {
                     log.error("Erro ao descarregar/processar o documento {}: {}", meta.fileTitle(), e.getMessage(), e);

@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mira.mira_api.domain.FinancialReports.dto.DocumentMeta;
 import com.mira.mira_api.domain.FinancialReports.repository.CompanyReportCollectorRepository;
 import com.mira.mira_api.domain.company.entity.Company;
+import com.mira.mira_api.infrastructure.downloader.ReportDownloader;
 import com.mira.mira_api.infrastructure.external.mziq.dto.MziqFilterRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,6 +17,7 @@ import org.springframework.web.client.RestClient;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 
 @Component
 public class MziqReportCollector implements CompanyReportCollectorRepository {
@@ -23,11 +25,13 @@ public class MziqReportCollector implements CompanyReportCollectorRepository {
     private static final Logger log = LoggerFactory.getLogger(MziqReportCollector.class);
 
     private final RestClient restClient;
+    private final ReportDownloader reportDownloader;
     private final ObjectMapper objectMapper = new ObjectMapper()
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
-    public MziqReportCollector(RestClient.Builder restClientBuilder) {
+    public MziqReportCollector(RestClient.Builder restClientBuilder, ReportDownloader reportDownloader) {
         this.restClient = restClientBuilder.build();
+        this.reportDownloader = reportDownloader;
     }
 
     @Override
@@ -47,7 +51,7 @@ public class MziqReportCollector implements CompanyReportCollectorRepository {
                 ? MziqFilterRequest.forBrazilianCompany(yearInt)
                 : MziqFilterRequest.forUsCompany(yearInt);
 
-        log.info("🔍 Consultando MZIQ para {} ({}) com ano={} e trimestre={}", company.getName(), company.getTicker(), year, quarter);
+        log.info("Consultando MZIQ para {} ({}) com ano={} e trimestre={}", company.getName(), company.getTicker(), year, quarter);
 
         String rawJson = restClient.post()
                 .uri(company.getApiUrl())
@@ -79,8 +83,6 @@ public class MziqReportCollector implements CompanyReportCollectorRepository {
                 for (JsonNode item : arrayNode) {
                     DocumentMeta meta = objectMapper.treeToValue(item, DocumentMeta.class);
                     allMetas.add(meta);
-                    log.info("📥 [MZIQ bruto] Título: '{}' | InternalName: '{}' | Ano: {} | Trimestre: {}",
-                            meta.fileTitle(), meta.internalName(), meta.fileYear(), meta.fileQuarter());
                 }
 
                 List<DocumentMeta> targetedMetas = new ArrayList<>();
@@ -90,28 +92,56 @@ public class MziqReportCollector implements CompanyReportCollectorRepository {
                     boolean isTargetQuarter = (quarter == null) || (meta.fileQuarter() != null && meta.fileQuarter().equals(quarter));
 
                     if (isTargetYear && isTargetQuarter) {
-                        // 🔓 MODO TOTALMENTE PERMISSIVO: Traz absolutamente TUDO o que pertencer ao trimestre/ano
-                        // Isto vai garantir que a apresentação entra, seja qual for o nome dela!
-                        targetedMetas.add(meta);
-                        log.info("🎯 Documento incluído sem restrições: [{}] (Internal: {})", meta.fileTitle(), meta.internalName());
+                        String originalUrl = meta.fileUrl();
+                        String extension = ".pdf";
+                        if (originalUrl != null && originalUrl.toLowerCase().contains(".xls")) {
+                            extension = ".xlsx";
+                        }
+
+                        String safeTitle = meta.fileTitle() != null ? meta.fileTitle().replaceAll("[^a-zA-Z0-9-_]", "_") : "report";
+                        String fileName = String.format("%s_%dT%d_%s%s", company.getTicker(), meta.fileQuarter() != null ? meta.fileQuarter() : 1, yearInt, safeTitle, extension);
+
+                        try {
+                            log.info("Processando e enviando para o S3: [{}]", meta.fileTitle());
+                            // Faz o download local temporário e envia automaticamente para o S3 via ReportDownloader
+                            String s3Uri = reportDownloader.downloadAndStore(originalUrl, fileName, company.getTicker(), year);
+
+                            // Reconstrói o DocumentMeta utilizando exatamente os campos do record DocumentMeta
+                            DocumentMeta s3Meta = new DocumentMeta(
+                                    meta.id() != null ? meta.id() : UUID.nameUUIDFromBytes((meta.fileTitle() + year).getBytes()).toString(),
+                                    meta.downloadLinkId(),
+                                    meta.fileTitle(),
+                                    meta.fileQuarter(),
+                                    meta.fileYear(),
+                                    meta.internalName(),
+                                    s3Uri, // Atualiza o fileUrl para apontar para o S3 (s3://...)
+                                    meta.filePublishedDate()
+                            );
+
+                            targetedMetas.add(s3Meta);
+                            log.info("Documento processado e guardado no S3: [{}] -> {}", meta.fileTitle(), s3Uri);
+
+                        } catch (Exception e) {
+                            log.warn("Falha ao descarregar/enviar documento [{}] para o S3: {}", meta.fileTitle(), e.getMessage());
+                        }
                     }
                 }
 
                 if (!targetedMetas.isEmpty()) {
-                    log.info("📑 Total de {} documentos enviados para processamento em Q{}/{}",
+                    log.info("Total de {} documentos processados e enviados para o S3 em Q{}/{}",
                             targetedMetas.size(), quarter != null ? quarter : "ALL", yearInt);
                     return targetedMetas;
                 }
 
-                log.warn("⚠️ Nenhum documento correspondente encontrado para Q{}/{} em {}.", quarter, yearInt, company.getTicker());
-                return allMetas;
+                log.warn("Nenhum documento correspondente encontrado para Q{}/{} em {}.", quarter, yearInt, company.getTicker());
+                return Collections.emptyList();
             }
 
-            log.warn("⚠️ Não foi possível identificar a lista 'document_metas' no JSON da empresa {}", company.getTicker());
+            log.warn("Não foi possível identificar a lista 'document_metas' no JSON da empresa {}", company.getTicker());
             return Collections.emptyList();
         } catch (Exception e) {
-            log.error("Erro ao converter resposta JSON do MZIQ para DocumentMeta", e);
-            throw new RuntimeException("Falha na desserialização do catálogo MZIQ", e);
+            log.error("Erro ao processar catálogo MZIQ", e);
+            throw new RuntimeException("Falha na recolha de relatórios MZIQ", e);
         }
     }
 

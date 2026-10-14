@@ -19,12 +19,12 @@ public class IndustryVertical {
 
     private String name;
 
-    private BigDecimal revenue; // Valor monetário (ex: 1308.2)
+    private BigDecimal revenue;
 
-    private BigDecimal growth; // Percentual de crescimento (ex: 19.3)
+    private BigDecimal growth;
 
     @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "revenue_id")
-    private Revenue revenueEntity; // Relacionamento com a entidade pai Revenue
+    private Revenue revenueEntity;
 }

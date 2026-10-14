@@ -151,7 +151,7 @@ public class FinancialDataExtractor {
 
     public FinancialReportDTO extractMetricsFromImages(List<byte[]> pageImages, String companyName, String ticker) {
         List<byte[]> targetedPages = pageImages.size() > 20 ? pageImages.subList(0, 20) : pageImages;
-        log.info("🖼️ Enviando as {} principais páginas estratégicas de {} ({}) para a IA multimodal...",
+        log.info("Enviando as {} principais páginas estratégicas de {} ({}) para a IA multimodal...",
                 targetedPages.size(), companyName, ticker);
 
         List<Media> mediaList = targetedPages.stream()
@@ -175,7 +175,7 @@ public class FinancialDataExtractor {
     }
 
     public FinancialReportDTO extractMetrics(String fullPdfText, String companyName, String ticker) {
-        log.info("🧠 Extraindo métricas via Texto no Bedrock para {} ({})...", companyName, ticker);
+        log.info("Extraindo métricas via Texto no Bedrock para {} ({})...", companyName, ticker);
 
         String systemPrompt = buildSystemPrompt(companyName, ticker);
 
@@ -215,7 +215,7 @@ public class FinancialDataExtractor {
                 cleanedJson = cleanedJson.substring(firstBrace, lastBrace + 1);
             }
 
-            log.info("📄 Resposta formatada do Bedrock:\n{}", cleanedJson);
+            log.info("Resposta formatada do Bedrock:\n{}", cleanedJson);
             return objectMapper.readValue(cleanedJson, FinancialReportDTO.class);
         } catch (Exception e) {
             log.error("Error parsing JSON from Bedrock: {}", rawResponse, e);

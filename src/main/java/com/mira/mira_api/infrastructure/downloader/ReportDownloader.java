@@ -1,5 +1,6 @@
 package com.mira.mira_api.infrastructure.downloader;
 
+import com.mira.mira_api.infrastructure.aws.S3StorageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -19,12 +20,30 @@ public class ReportDownloader {
     private static final String STORAGE_DIR = "temp_reports";
 
     private final RestClient restClient;
+    private final S3StorageService s3StorageService;
 
-    public ReportDownloader(RestClient.Builder restClientBuilder) {
+    public ReportDownloader(RestClient.Builder restClientBuilder, S3StorageService s3StorageService) {
         this.restClient = restClientBuilder.build();
+        this.s3StorageService = s3StorageService;
     }
 
+
+    public String downloadAndStore(String url, String fileName, String ticker, String year) {
+        File localFile = downloadPdfToLocal(url, fileName);
+
+        // Define a chave estruturada no S3 (ex: reports/EPAM/2026/EPAM_Q2T2026_Earnings_Presentation.pdf)
+        String s3Key = String.format("reports/%s/%s/%s", ticker.toUpperCase(), year, fileName);
+
+        // Envia para o S3 e limpa o ficheiro local temporário
+        return s3StorageService.uploadFile(localFile, s3Key);
+    }
+
+
     public File downloadPdf(String url, String fileName) {
+        return downloadPdfToLocal(url, fileName);
+    }
+
+    private File downloadPdfToLocal(String url, String fileName) {
         try {
             Path targetDirPath = Paths.get(STORAGE_DIR);
             Files.createDirectories(targetDirPath);
@@ -46,7 +65,7 @@ public class ReportDownloader {
                 }
             }
 
-            log.info("🌐 Baixando relatório de [{}] para [{}]...", url, fileName);
+            log.info("Baixando relatório de [{}] para [{}]...", url, fileName);
 
             // 3. Download HTTP tradicional caso não seja arquivo local
             byte[] pdfBytes = restClient.get()
@@ -63,7 +82,7 @@ public class ReportDownloader {
                 fos.write(pdfBytes);
             }
 
-            log.info("💾 Relatório salvo em: {}", destination.getAbsolutePath());
+            log.info("Relatório salvo localmente em: {}", destination.getAbsolutePath());
             return destination;
 
         } catch (Exception e) {

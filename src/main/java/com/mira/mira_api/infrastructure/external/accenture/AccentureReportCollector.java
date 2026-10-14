@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mira.mira_api.domain.FinancialReports.dto.DocumentMeta;
 import com.mira.mira_api.domain.FinancialReports.repository.CompanyReportCollectorRepository;
 import com.mira.mira_api.domain.company.entity.Company;
+import com.mira.mira_api.infrastructure.downloader.ReportDownloader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -25,11 +26,13 @@ public class AccentureReportCollector implements CompanyReportCollectorRepositor
     private static final String BASE_URL = "https://investor.accenture.com";
 
     private final RestClient restClient;
+    private final ReportDownloader reportDownloader;
     private final ObjectMapper objectMapper = new ObjectMapper()
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
-    public AccentureReportCollector(RestClient.Builder restClientBuilder) {
+    public AccentureReportCollector(RestClient.Builder restClientBuilder, ReportDownloader reportDownloader) {
         this.restClient = restClientBuilder.build();
+        this.reportDownloader = reportDownloader;
     }
 
     @Override
@@ -39,13 +42,12 @@ public class AccentureReportCollector implements CompanyReportCollectorRepositor
 
     @Override
     public List<DocumentMeta> fetchReportMetas(Company company, String year) {
-        // Monta a URL dinâmica com o ano passado no comando
         String endpointUrl = String.format(
                 "%s/filings-and-reports/earnings-reports/module-holder/earnings-reports-documents?async=1&year=%s&archived=*&page=1&pageSize=10",
                 BASE_URL, year
         );
 
-        log.info("🔍 Consultando API da Accenture para {} com ano={}: {}", company.getTicker(), year, endpointUrl);
+        log.info("Consultando API da Accenture para {} com ano={}: {}", company.getTicker(), year, endpointUrl);
 
         try {
             String rawJson = restClient.get()
@@ -55,7 +57,7 @@ public class AccentureReportCollector implements CompanyReportCollectorRepositor
                     .body(String.class);
 
             if (rawJson == null || rawJson.isBlank()) {
-                log.warn("⚠️ Resposta vazia da API da Accenture");
+                log.warn("Resposta vazia da API da Accenture");
                 return Collections.emptyList();
             }
 
@@ -63,7 +65,7 @@ public class AccentureReportCollector implements CompanyReportCollectorRepositor
             JsonNode dataArray = root.path("data");
 
             if (!dataArray.isArray()) {
-                log.warn("⚠️ Campo 'data' não é um array no retorno da Accenture");
+                log.warn("Campo 'data' não é um array no retorno da Accenture");
                 return Collections.emptyList();
             }
 
@@ -81,32 +83,45 @@ public class AccentureReportCollector implements CompanyReportCollectorRepositor
                     String docExt = linkNode.path("docExt").asText("");
                     String relativeLink = linkNode.path("link").asText("");
 
-                    // Valida se é PDF e se enquadra nos tipos desejados (Earnings Release ou Presentation)
                     if ("PDF".equalsIgnoreCase(docExt.trim())) {
                         String category = categorizeDocument(customLinkText, relativeLink);
 
                         if (category != null) {
-                            String fullPdfUrl = relativeLink.startsWith("http") ? relativeLink : BASE_URL + relativeLink;
+                            String originalUrl = relativeLink.startsWith("http") ? relativeLink : BASE_URL + relativeLink;
                             String docTitle = String.format("%s - %s", quarterTitle, customLinkText);
 
-                            log.info("📄 Documento identificado para Accenture [{}]: [{}] -> {}", category, docTitle, fullPdfUrl);
+                            try {
+                                log.info("Processando e enviando Accenture para o S3: [{}]", docTitle);
 
-                            documentMetas.add(new DocumentMeta(
-                                    UUID.nameUUIDFromBytes(fullPdfUrl.getBytes()).toString(),
-                                    fullPdfUrl,
-                                    docTitle,
-                                    quarterNumber,
-                                    Integer.parseInt(year),
-                                    category,
-                                    fullPdfUrl,
-                                    quarterNode.path("date").asText(null)
-                            ));
+                                // Gera um nome de ficheiro seguro para o S3
+                                String safeTitle = docTitle.replaceAll("[^a-zA-Z0-9-_]", "_");
+                                String fileName = String.format("%s_Q%d_%s_%s.pdf", company.getTicker(), quarterNumber, year, safeTitle);
+
+                                // Faz o download local temporário e envia para o S3
+                                String s3Uri = reportDownloader.downloadAndStore(originalUrl, fileName, company.getTicker(), year);
+
+                                documentMetas.add(new DocumentMeta(
+                                        UUID.nameUUIDFromBytes(originalUrl.getBytes()).toString(),
+                                        originalUrl,
+                                        docTitle,
+                                        quarterNumber,
+                                        Integer.parseInt(year),
+                                        category,
+                                        s3Uri, // Aponta para a URI do S3 (s3://...)
+                                        quarterNode.path("date").asText(null)
+                                ));
+
+                                log.info("Accenture guardado no S3 com sucesso: [{}] -> {}", docTitle, s3Uri);
+
+                            } catch (Exception e) {
+                                log.warn("Falha ao descarregar/enviar PDF da Accenture para o S3 [{}] : {}", docTitle, e.getMessage());
+                            }
                         }
                     }
                 }
             }
 
-            log.info("📑 Encontrados {} documentos contábeis/operacionais para Accenture no ano {}", documentMetas.size(), year);
+            log.info("Encontrados e processados {} documentos para o S3 da Accenture no ano {}", documentMetas.size(), year);
             return documentMetas;
 
         } catch (Exception e) {

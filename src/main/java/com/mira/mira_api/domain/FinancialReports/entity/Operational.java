@@ -31,6 +31,5 @@ public class Operational {
     @JoinColumn(name = "financial_report_id")
     private FinancialReport financialReport;
 
-    // getters e setters
 }
 
