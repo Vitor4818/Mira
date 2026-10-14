@@ -27,7 +27,6 @@ public class ReportDownloader {
         this.s3StorageService = s3StorageService;
     }
 
-
     public String downloadAndStore(String url, String fileName, String ticker, String year) {
         File localFile = downloadPdfToLocal(url, fileName);
 
@@ -37,7 +36,6 @@ public class ReportDownloader {
         // Envia para o S3 e limpa o ficheiro local temporário
         return s3StorageService.uploadFile(localFile, s3Key);
     }
-
 
     public File downloadPdf(String url, String fileName) {
         return downloadPdfToLocal(url, fileName);
@@ -56,7 +54,32 @@ public class ReportDownloader {
                 return destination;
             }
 
-            // 2. Se a URL apontar para o protocolo file://, resolve o arquivo diretamente
+            // 2. Se a URL apontar para o protocolo s3://, descarrega diretamente via S3StorageService / AWS SDK
+            if (url != null && url.startsWith("s3://")) {
+                log.info("☁️ Detetado link S3 [{}]. A baixar via S3StorageService...", url);
+
+                // Remove o prefixo s3:// e separa o bucket do object key (ex: s3://bucket-name/path/to/file.pdf)
+                String withoutScheme = url.substring(5);
+                int firstSlash = withoutScheme.indexOf('/');
+
+                if (firstSlash == -1) {
+                    throw new IllegalArgumentException("URL do S3 inválida (falta o caminho do objeto): " + url);
+                }
+
+                String s3Key = withoutScheme.substring(firstSlash + 1);
+
+                // Delega o download para o serviço do S3 para guardar diretamente no destino local
+                s3StorageService.downloadFileToPath(s3Key, destination.toPath());
+
+                if (destination.exists() && destination.length() > 0) {
+                    log.info("Relatório S3 descarregado localmente em: {}", destination.getAbsolutePath());
+                    return destination;
+                } else {
+                    throw new RuntimeException("O ficheiro descarregado do S3 está vazio ou não foi encontrado.");
+                }
+            }
+
+            // 3. Se a URL apontar para o protocolo file://, resolve o arquivo diretamente
             if (url != null && (url.startsWith("file:") || url.startsWith("file:/"))) {
                 File localFile = new File(URI.create(url));
                 if (localFile.exists() && localFile.length() > 0) {
@@ -65,9 +88,9 @@ public class ReportDownloader {
                 }
             }
 
-            log.info("Baixando relatório de [{}] para [{}]...", url, fileName);
+            log.info("Baixando relatório via HTTP de [{}] para [{}]...", url, fileName);
 
-            // 3. Download HTTP tradicional caso não seja arquivo local
+            // 4. Download HTTP tradicional caso não seja S3 nem ficheiro local
             byte[] pdfBytes = restClient.get()
                     .uri(url)
                     .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")

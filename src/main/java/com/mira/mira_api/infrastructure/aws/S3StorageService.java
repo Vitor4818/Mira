@@ -5,10 +5,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.core.sync.ResponseTransformer;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.File;
+import java.nio.file.Path;
 
 @Service
 public class S3StorageService {
@@ -47,6 +50,24 @@ public class S3StorageService {
         } catch (Exception e) {
             log.error("❌ Erro ao enviar ficheiro para o S3: {}", e.getMessage(), e);
             throw new RuntimeException("Falha no upload para o S3", e);
+        }
+    }
+
+    public void downloadFileToPath(String s3Key, Path destinationPath) {
+        try {
+            log.info("A baixar objeto do S3 (Bucket: {} / Key: {}) para [{}]...", bucketName, s3Key, destinationPath);
+
+            GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(s3Key)
+                    .build();
+
+            s3Client.getObject(getObjectRequest, ResponseTransformer.toFile(destinationPath));
+
+            log.info("✅ Download do S3 concluído com sucesso para o caminho local.");
+        } catch (Exception e) {
+            log.error("❌ Erro ao descarregar ficheiro do S3: {}", e.getMessage(), e);
+            throw new RuntimeException("Falha no download a partir do S3: " + e.getMessage(), e);
         }
     }
 }
