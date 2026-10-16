@@ -38,6 +38,7 @@ public class SyncReportsCommandHandler {
     private final CompanyReportService companyReportService;
     private final ReportRepository reportRepository;
     private final FinancialReportRepository financialReportRepository;
+    private final IndustryVerticalRepository industryVerticalRepository; // Repositório injetado para resolver o catálogo
     private final ReportDownloader reportDownloader;
     private final SpringAiPdfService springAiPdfService;
     private final FinancialDataExtractor extractor;
@@ -49,6 +50,7 @@ public class SyncReportsCommandHandler {
             CompanyReportService companyReportService,
             ReportRepository reportRepository,
             FinancialReportRepository financialReportRepository,
+            IndustryVerticalRepository industryVerticalRepository,
             ReportDownloader reportDownloader,
             SpringAiPdfService springAiPdfService,
             FinancialDataExtractor extractor,
@@ -59,6 +61,7 @@ public class SyncReportsCommandHandler {
         this.companyReportService = companyReportService;
         this.reportRepository = reportRepository;
         this.financialReportRepository = financialReportRepository;
+        this.industryVerticalRepository = industryVerticalRepository;
         this.reportDownloader = reportDownloader;
         this.springAiPdfService = springAiPdfService;
         this.extractor = extractor;
@@ -82,7 +85,6 @@ public class SyncReportsCommandHandler {
             return;
         }
 
-        // Agrupa os documentos por trimestre (ex: Q1, Q2) para processar cada trimestre isoladamente
         Map<Integer, List<DocumentMeta>> metasByQuarter = metas.stream()
                 .filter(m -> {
                     int docYear = m.fileYear() != null ? Integer.parseInt(String.valueOf(m.fileYear())) : targetYearValue;
@@ -94,9 +96,8 @@ public class SyncReportsCommandHandler {
             int targetQuarter = entry.getKey();
             List<DocumentMeta> quarterMetas = entry.getValue();
 
-            // Proteção contra duplicidade de trimestre
             if (financialReportRepository.existsByTickerAndYearAndQuarter(company.getTicker(), targetYearValue, targetQuarter)) {
-                log.info("⏭Trimestre {}T{} de {} já processado anteriormente. Ignorando.",
+                log.info("⏭ Trimestre {}T{} de {} já processado anteriormente. Ignorando.",
                         targetQuarter, targetYearValue, company.getTicker());
                 continue;
             }
@@ -136,7 +137,7 @@ public class SyncReportsCommandHandler {
                 String titleLower = meta.fileTitle() != null ? meta.fileTitle().toLowerCase() : "";
 
                 if (isPurelyIrrelevantDocument(titleLower)) {
-                    log.info("⏭Ignorando arquivo irrelevante: {}", meta.fileTitle());
+                    log.info("⏭ Ignorando arquivo irrelevante: {}", meta.fileTitle());
                     continue;
                 }
 
@@ -210,10 +211,17 @@ public class SyncReportsCommandHandler {
     }
 
     private void mapListsToEntity(FinancialReport financialReport, FinancialReportDTO dto) {
+        // Normalização e associação inteligente de Verticais de Indústria com o Catálogo Mestre
         if (dto.industryVerticals() != null && (financialReport.getIndustryVerticals() == null || financialReport.getIndustryVerticals().isEmpty())) {
             for (var vDto : dto.industryVerticals()) {
+                String rawName = vDto.verticalName() != null ? vDto.verticalName().trim() : "Geral";
+
+                // Procura no catálogo mestre (ignorando maiúsculas/minúsculas). Se não existir, cria automaticamente!
+                IndustryVertical catalogVertical = industryVerticalRepository.findByNameIgnoreCase(rawName)
+                        .orElseGet(() -> industryVerticalRepository.save(new IndustryVertical(rawName)));
+
                 FinancialReportVertical vertical = new FinancialReportVertical();
-                vertical.setVerticalName(vDto.verticalName());
+                vertical.setIndustryVertical(catalogVertical); // Associa à tabela mestre
                 vertical.setRevenue(vDto.revenue());
                 vertical.setPercentage(vDto.percentage());
                 financialReport.addVertical(vertical);

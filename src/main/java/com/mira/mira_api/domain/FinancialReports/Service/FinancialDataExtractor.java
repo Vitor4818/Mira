@@ -29,54 +29,54 @@ public class FinancialDataExtractor {
         O relatório pode estar redigido em PORTUGUÊS ou INGLÊS.
 
         INSTRUÇÕES CRÍTICAS DE EXTRAÇÃO:
-        1. "netRevenue" (Receita Líquida):
-           - Termos em inglês: "Net Revenue", "Total Net Revenue", "Revenue", "Revenues".
-           - Termos em português: "Receita Líquida", "Receita Líquida Total", "Receita Operacional Líquida".
-           - Priorize SEMPRE o resultado do trimestre corrente analisado. Retorne o valor numérico em MILHÕES.
+1. "netRevenue" (Receita Líquida):
+- Termos em inglês: "Net Revenue", "Total Net Revenue", "Revenue", "Revenues".
+- Termos em português: "Receita Líquida", "Receita Líquida Total", "Receita Operacional Líquida".
+- Priorize SEMPRE o resultado do trimestre corrente analisado. Retorne o valor numérico em MILHÕES.
 
         2. "revenueGrowth" (Crescimento YoY da Receita):
-           - Taxa percentual de variação homóloga da receita líquida face ao mesmo trimestre do ano anterior (ex: 5.0, 3.2 ou -8.6).
+- Taxa percentual de variação homóloga da receita líquida face ao mesmo trimestre do ano anterior (ex: 5.0, 3.2 ou -8.6).
 
         3. Rentabilidade e Margens (`profitability`):
-           - "grossMargin": Margem Bruta ou Margem Bruta Ajustada (%).
-           - "ebitdaMargin": Margem EBITDA ou % EBITDA Ajustado (%). Procure por "EBITDA", "Adjusted EBITDA", "Profit from Operations" ou "Adjusted Profit from Operations".
+- "grossMargin": Margem Bruta ou Margem Bruta Ajustada (%).
+- "ebitdaMargin": Margem EBITDA ou % EBITDA Ajustado (%). Procure por "EBITDA", "Adjusted EBITDA", "Profit from Operations" ou "Adjusted Profit from Operations".
              *FALLBACK*: Se o EBITDA não estiver explícito, calcule-o somando o *Profit from Operations* com as despesas de *Depreciation & Amortization*. Divida pela receita líquida para obter a margem percentual. Se não houver dados, retorne 0.0.
-           - "netMargin": Margem Líquida (%).
-           - "fcfMargin": Margem de Fluxo de Caixa Livre (%).
-           - "ruleOf40Score": Score da Regra dos 40.
-           - "freeCashFlowConversion": Taxa de conversão de FCF.
-           - "sgaToRevenue": Proporção de despesas SG&A em relação à Receita Líquida (%).
+- "netMargin": Margem Líquida (%).
+- "fcfMargin": Margem de Fluxo de Caixa Livre (%).
+- "ruleOf40Score": Score da Regra dos 40.
+- "freeCashFlowConversion": Taxa de conversão de FCF.
+- "sgaToRevenue": Proporção de despesas SG&A em relação à Receita Líquida (%).
 
         4. Métricas Operacionais e de Equipe (`operationalMetrics`):
-           - "utilizationRate" (Taxa de Utilização / Alocação): ATENÇÃO CRÍTICA: Procure por "Utilization Rate", "Billable Utilization", "Resource Utilization", "Consultant Utilization", "Employee Utilization", "Capacity Utilization", "Taxa de Utilização", "Taxa de Alocação" ou "Índice de Ocupação". Se omitido, retorne 0.0.
-           - "attrition" (Rotatividade / Turnover): ATENÇÃO CRÍTICA: Procure obrigatoriamente pelos termos "Attrition", "Voluntary Attrition", "Turnover", "Rotatividade", "Taxa de Rotatividade" ou "Taxa de Saída" (geralmente presente nos slides de RH/Operacionais da Apresentação de Resultados). Extraia o valor percentual (ex: 12.5, 14.2). Se não encontrar de todo, retorne 0.0.
-           - "employees": Número total de funcionários, colaboradores ou headcount (inteiro).
-           - "revenuePerProfessional": Receita média por profissional, consultor ou funcionário.
+- "utilizationRate" (Taxa de Utilização / Alocação): ATENÇÃO CRÍTICA: Procure por "Utilization Rate", "Billable Utilization", "Resource Utilization", "Consultant Utilization", "Employee Utilization", "Capacity Utilization", "Taxa de Utilização", "Taxa de Alocação" ou "Índice de Ocupação". Se omitido, retorne 0.0.
+- "attrition" (Rotatividade / Turnover): ATENÇÃO CRÍTICA: Procure obrigatoriamente pelos termos "Attrition", "Voluntary Attrition", "Turnover", "Rotatividade", "Taxa de Rotatividade" ou "Taxa de Saída". Extraia o valor percentual (ex: 12.5, 14.2). Se não encontrar de todo, retorne 0.0.
+- "employees": Número total de funcionários, colaboradores ou headcount (inteiro).
+- "revenuePerProfessional": Receita média por profissional, consultor ou funcionário.
 
         5. Clientes e Retenção (`clients`):
-           - "topClientConcentration": Concentração de receita no maior cliente individual / Top 1 (%). Procure por "largest customer", "top client", "single customer". Se o relatório apenas mencionar o Top 5 ou Top 10 e omitir o Top 1, analise se há menção a "no customer represents more than X%" e use esse limite, caso contrário retorne 0.0.
-           - "top5ClientsConcentration": Concentração nos 5 maiores clientes / Top 5 (%). Procure por "top 5 clients", "five largest customers".
-           - "top10ClientsConcentration": Concentração nos 10 maiores clientes / Top 10 (%). Procure por "top 10 clients", "ten largest customers".
-           - "netRetentionRate": Net Retention Rate (NRR) ou taxa de retenção líquida de receita (%).
+- "topClientConcentration": Concentração de receita no maior cliente individual / Top 1 (%).
+- "top5ClientsConcentration": Concentração nos 5 maiores clientes / Top 5 (%).
+- "top10ClientsConcentration": Concentração nos 10 maiores clientes / Top 10 (%).
+- "netRetentionRate": Net Retention Rate (NRR) ou taxa de retenção líquida de receita (%).
 
         6. "industryVerticals" (Distribuição por Verticais de Indústria):
-           - Extraia a lista dinâmica de segmentos, indústrias ou verticais apresentados no relatório ou em gráficos (ex: Media and Entertainment, Banking/Financial Services, Retail, Tech, Healthcare, etc.).
-           - Para cada vertical encontrada:
-             - "name": O nome exato da vertical.
-             - "revenue": Se a apresentação contiver apenas a porcentagem (%) da vertical em um gráfico (ex: 21%, 20%, 18%), CALCULE O VALOR EM MILHÕES multiplicando essa porcentagem pela Receita Líquida Total (`netRevenue`). Se o valor em dinheiro já estiver explícito, use-o diretamente.
-             - "growth": A taxa de crescimento associada (se disponível, senão 0.0).
-           - Se não houver dados de verticais, retorne uma lista vazia [].
+- Extraia a lista dinâmica de segmentos, indústrias ou verticais apresentados no relatório ou em gráficos (ex: Banking/Financial Services, Retail, Cloud Computing, Healthcare, etc.).
+- Para cada vertical encontrada:
+  - "name": O nome limpo e padronizado da vertical (evite termos excessivamente longos ou redundantes).
+  - "revenue": Se a apresentação contiver apenas a porcentagem (%) da vertical em um gráfico (ex: 21%), CALCULE O VALOR EM MILHÕES multiplicando essa porcentagem pela Receita Líquida Total (`netRevenue`). Se o valor em dinheiro já estiver explícito, use-o diretamente.
+  - "growth": A taxa de crescimento associada (se disponível, senão 0.0).
+- Se não houver dados de verticais, retorne uma lista vazia [].
 
         7. "geographicRevenue" (Distribuição Geográfica da Receita):
-           - Extraia a lista dinâmica de regiões, países ou mercados geográficos apresentados (ex: North America, LATAM, Europe, New Markets, etc.).
-           - Para cada região encontrada:
-             - "name": O nome exato da região ou país.
-             - "percentage": O valor percentual que a região representa (ex: 53.0, 21.0, 5.0).
-             - "revenue": Se estiver apenas em porcentagem, CALCULE O VALOR EM MILHÕES (porcentagem * Receita Líquida Total). Se o valor em dinheiro já estiver explícito, use-o diretamente.
-           - Se não houver dados geográficos segmentados, retorne uma lista vazia [].
+- Extraia a lista dinâmica de regiões, países ou mercados geográficos apresentados (ex: North America, LATAM, Europe, etc.).
+- Para cada região encontrada:
+  - "name": O nome exato da região ou país.
+  - "percentage": O valor percentual que a região representa (ex: 53.0).
+  - "revenue": Se estiver apenas em porcentagem, calcule o valor em milhões correspondente.
+- Se não houver dados geográficos segmentados, retorne uma lista vazia [].
 
         8. Exposição de Mercado:
-           - "verticalExposure": Resumo ou distribuição descritiva adicional da receita por verticais de indústria (se houver).
+- "verticalExposure": Resumo ou distribuição descritiva adicional da receita por verticais de indústria (se houver).
 
         ESTRUTURA JSON EXIGIDA (Mantenha as chaves inalteradas):
         {
@@ -139,10 +139,10 @@ public class FinancialDataExtractor {
         }
 
         REGRAS DE FORMATAÇÃO:
-        - Utilize sempre números decimais com ponto (.) como separador.
-        - Caso uma métrica não esteja presente, atribua 0.0 (ou 0 para inteiros / "" para texto).
-        - Não inclua símbolos monetários ("R$", "$") nem de porcentagem ("%").
-        - Devolva estritamente o JSON válido sem anotações adicionais.
+- Utilize sempre números decimais com ponto (.) como separador.
+- Caso uma métrica não esteja presente, atribua 0.0 (ou 0 para inteiros / "" para texto).
+- Não inclua símbolos monetários ("R$", "$") nem de porcentagem ("%").
+- Devolva estritamente o JSON válido sem anotações adicionais.
     """;
 
     public FinancialDataExtractor(ChatClient chatClient) {

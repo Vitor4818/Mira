@@ -1,14 +1,12 @@
 package com.mira.mira_api.domain.FinancialReports.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
-
-import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "industry_verticals")
+@Table(name = "industry_verticals") // Garante que aponta para a tabela oficial na AWS
 @Getter
 @Setter
 public class IndustryVertical {
@@ -17,14 +15,9 @@ public class IndustryVertical {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false, unique = true)
     private String name;
 
-    private BigDecimal revenue;
-
-    private BigDecimal growth;
-
-    @JsonIgnore
-    @ManyToOne
-    @JoinColumn(name = "revenue_id")
-    private Revenue revenueEntity;
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt = LocalDateTime.now();
 }

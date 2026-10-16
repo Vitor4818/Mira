@@ -2,12 +2,20 @@ package com.mira.mira_api.domain.FinancialReports.mapper;
 
 import com.mira.mira_api.domain.FinancialReports.dto.*;
 import com.mira.mira_api.domain.FinancialReports.entity.*;
+import com.mira.mira_api.domain.sector.entity.IndustryVertical;
+import com.mira.mira_api.domain.sector.repository.IndustryVerticalRepository;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 
 @Component
 public class FinancialReportMapper {
+
+    private final IndustryVerticalRepository verticalRepository;
+
+    public FinancialReportMapper(IndustryVerticalRepository verticalRepository) {
+        this.verticalRepository = verticalRepository;
+    }
 
     public FinancialReport toEntity(FinancialReportDTO dto, String company, String ticker, Integer year, Integer quarter) {
         if (dto == null) return null;
@@ -20,7 +28,7 @@ public class FinancialReportMapper {
 
         // 1. Revenue
         if (dto.revenue() != null) {
-            Revenue revenue = toRevenueEntity(dto.revenue());
+            Revenue revenue = toRevenueEntity(dto.revenue(), report);
             revenue.setFinancialReport(report);
             report.setRevenue(revenue);
         }
@@ -56,21 +64,29 @@ public class FinancialReportMapper {
         return report;
     }
 
-    private Revenue toRevenueEntity(RevenueDTO dto) {
+    private Revenue toRevenueEntity(RevenueDTO dto, FinancialReport report) {
         Revenue revenue = new Revenue();
         revenue.setRevenue(dto.revenue());
         revenue.setRevenueGrowth(dto.revenueGrowth());
 
         if (dto.industryVerticals() != null && !dto.industryVerticals().isEmpty()) {
-            List<IndustryVertical> verticals = dto.industryVerticals().stream().map(vDto -> {
-                IndustryVertical vertical = new IndustryVertical();
-                vertical.setName(vDto.name());
-                vertical.setRevenue(vDto.revenue());
-                vertical.setGrowth(vDto.growth());
-                vertical.setRevenueEntity(revenue);
-                return vertical;
+            List<FinancialReportVertical> reportVerticals = dto.industryVerticals().stream().map(vDto -> {
+                // 1. Normaliza o nome e procura no catálogo oficial (ou cria se não existir)
+                String verticalName = vDto.name() != null ? vDto.name().trim() : "Geral";
+                IndustryVertical catalogVertical = verticalRepository.findByNameIgnoreCase(verticalName)
+                        .orElseGet(() -> verticalRepository.save(new IndustryVertical(verticalName)));
+
+                // 2. Mapeia para a tabela de relação (FinancialReportVertical)
+                FinancialReportVertical reportVertical = new FinancialReportVertical();
+                reportVertical.setFinancialReport(report);
+                reportVertical.setIndustryVertical(catalogVertical);
+                reportVertical.setRevenue(vDto.revenue());
+                // reportVertical.setPercentage(vDto.growth()); // Ajusta caso o DTO traga percentagem ou crescimento
+
+                return reportVertical;
             }).toList();
-            revenue.setIndustryVerticals(verticals);
+
+            revenue.setFinancialReportVerticals(reportVerticals);
         }
 
         return revenue;

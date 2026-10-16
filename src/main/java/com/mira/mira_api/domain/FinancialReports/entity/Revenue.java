@@ -23,8 +23,9 @@ public class Revenue {
 
     private BigDecimal revenueGrowth;
 
-    @OneToMany(mappedBy = "revenueEntity", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<IndustryVertical> industryVerticals = new ArrayList<>();
+    // Alterado para mapear a tabela de ligação correta que aponta para o catálogo mestre
+    @OneToMany(mappedBy = "revenue", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<FinancialReportVertical> industryVerticals = new ArrayList<>();
 
     @JsonIgnore
     @OneToOne

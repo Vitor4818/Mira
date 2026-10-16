@@ -1,6 +1,5 @@
 package com.mira.mira_api.domain.FinancialReports.entity;
 
-import com.mira.mira_api.domain.FinancialReports.entity.FinancialReport;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -19,10 +18,17 @@ public class FinancialReportVertical {
     @JoinColumn(name = "financial_report_id", nullable = false)
     private FinancialReport financialReport;
 
-    @Column(name = "vertical_name", nullable = false)
-    private String verticalName;
+    // Associa à receita a que esta vertical pertence (mapeia o 'industryVerticals' em Revenue)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "revenue_id")
+    private Revenue revenue;
 
-    private BigDecimal revenue;
+    // Substitui o antigo 'vertical_name' pela chave estrangeira para o catálogo mestre
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "vertical_id", nullable = false)
+    private IndustryVertical industryVertical;
+
+    private BigDecimal revenueValue;
 
     private BigDecimal percentage;
 }
